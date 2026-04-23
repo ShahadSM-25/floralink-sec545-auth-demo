@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  AlertTriangle,
-  CheckCircle2,
-  CircleAlert,
+  Check,
   Eye,
   EyeOff,
   Flower2,
   Lock,
   ShieldCheck,
+  ShoppingBag,
+  Sparkles,
 } from "lucide-react";
+import { Link } from "wouter";
 
 type RegisterForm = {
   fullName: string;
@@ -23,20 +24,14 @@ type LoginForm = {
   password: string;
 };
 
-type RegisterState = "form" | "success" | "exists" | "invalid";
-
-type LoginState = "form" | "invalid" | "warning" | "locked" | "success";
-
-const existingEmail = "reem@example.com";
 const demoAccount = {
-  fullName: "Reem Alshareef",
+  name: "Reem Alshareef",
   email: "reem@example.com",
-  phone: "+966 50 123 4567",
   password: "Bloom@2026",
-  memberSince: "Apr 2026",
+  phone: "+966 50 123 4567",
 };
 
-const registerDefaults: RegisterForm = {
+const emptyRegister: RegisterForm = {
   fullName: "",
   email: "",
   phone: "",
@@ -44,105 +39,85 @@ const registerDefaults: RegisterForm = {
   confirmPassword: "",
 };
 
-const loginDefaults: LoginForm = {
+const emptyLogin: LoginForm = {
   email: demoAccount.email,
   password: "",
 };
 
-function twoDigits(value: number) {
-  return value.toString().padStart(2, "0");
-}
-
-function formatCountdown(totalSeconds: number) {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${twoDigits(minutes)}:${twoDigits(seconds)}`;
-}
-
-function ruleCheck(password: string) {
+function getPasswordRules(password: string) {
   return [
-    { label: "At least 8 characters", passed: password.length >= 8 },
-    { label: "At least one uppercase letter (A-Z)", passed: /[A-Z]/.test(password) },
-    { label: "At least one number (0-9)", passed: /\d/.test(password) },
-    { label: "At least one special character (@#$!)", passed: /[^A-Za-z0-9]/.test(password) },
-    { label: "Not a known common password", passed: password.length >= 8 && !/(password|123456|qwerty|welcome)/i.test(password) },
+    { label: "8+ characters", passed: password.length >= 8 },
+    { label: "Uppercase letter", passed: /[A-Z]/.test(password) },
+    { label: "Number", passed: /\d/.test(password) },
+    { label: "Special character", passed: /[^A-Za-z0-9]/.test(password) },
+    {
+      label: "Not common",
+      passed: password.length >= 8 && !/(password|123456|qwerty|welcome)/i.test(password),
+    },
   ];
 }
 
-function MockupHeader({ rightLabel }: { rightLabel: string }) {
-  return (
-    <div className="phone-header">
-      <div className="brand-mark">
-        <Flower2 className="h-4 w-4" />
-        <span>FloraLink</span>
-      </div>
-      <div className="phone-nav">
-        <span>Shop</span>
-        <span>{rightLabel}</span>
-      </div>
-    </div>
-  );
+function formatTime(totalSeconds: number) {
+  const minutes = Math.floor(totalSeconds / 60)
+    .toString()
+    .padStart(2, "0");
+  const seconds = (totalSeconds % 60).toString().padStart(2, "0");
+  return `${minutes}:${seconds}`;
 }
 
 export default function Home() {
-  const [view, setView] = useState<"register" | "login" | "mitigations">("register");
-  const [registerForm, setRegisterForm] = useState<RegisterForm>(registerDefaults);
-  const [loginForm, setLoginForm] = useState<LoginForm>(loginDefaults);
-  const [registerState, setRegisterState] = useState<RegisterState>("form");
-  const [loginState, setLoginState] = useState<LoginState>("form");
-  const [failedAttempts, setFailedAttempts] = useState(0);
-  const [lockSeconds, setLockSeconds] = useState(0);
+  const [tab, setTab] = useState<"register" | "login">("register");
+  const [registerForm, setRegisterForm] = useState<RegisterForm>(emptyRegister);
+  const [loginForm, setLoginForm] = useState<LoginForm>(emptyLogin);
+  const [registerState, setRegisterState] = useState<"idle" | "error" | "exists" | "success">("idle");
+  const [loginState, setLoginState] = useState<"idle" | "error" | "warning" | "locked" | "success">("idle");
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockSeconds, setLockSeconds] = useState(0);
 
   useEffect(() => {
-    if (lockSeconds <= 0) {
-      return;
-    }
+    if (lockSeconds <= 0) return;
     const timer = window.setInterval(() => {
-      setLockSeconds((current) => (current <= 1 ? 0 : current - 1));
+      setLockSeconds((value) => (value <= 1 ? 0 : value - 1));
     }, 1000);
     return () => window.clearInterval(timer);
   }, [lockSeconds]);
 
   useEffect(() => {
     if (lockSeconds === 0 && loginState === "locked") {
-      setLoginState("form");
+      setLoginState("idle");
       setFailedAttempts(0);
-      setLoginForm(loginDefaults);
     }
   }, [lockSeconds, loginState]);
 
-  const passwordRules = useMemo(() => ruleCheck(registerForm.password), [registerForm.password]);
-  const passedRules = passwordRules.filter((rule) => rule.passed).length;
-  const allRulesPassed = passedRules === passwordRules.length;
-  const passwordMeter = `${(passedRules / passwordRules.length) * 100}%`;
-  const invalidEmailFormat = registerForm.email.length > 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerForm.email);
-  const passwordsMatch = registerForm.confirmPassword.length > 0 && registerForm.password === registerForm.confirmPassword;
+  const passwordRules = useMemo(() => getPasswordRules(registerForm.password), [registerForm.password]);
+  const passedRules = passwordRules.filter((item) => item.passed).length;
+  const passwordStrong = passedRules === passwordRules.length;
+  const passwordProgress = `${(passedRules / passwordRules.length) * 100}%`;
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerForm.email);
+  const confirmMatch = registerForm.password.length > 0 && registerForm.password === registerForm.confirmPassword;
 
-  function handleRegisterSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function submitRegister(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const normalizedEmail = registerForm.email.trim().toLowerCase();
     const hasEmpty = Object.values(registerForm).some((value) => value.trim() === "");
-    const invalid =
-      hasEmpty || invalidEmailFormat || !allRulesPassed || registerForm.password !== registerForm.confirmPassword;
 
-    if (normalizedEmail === existingEmail) {
+    if (normalizedEmail === demoAccount.email) {
       setRegisterState("exists");
       return;
     }
 
-    if (invalid) {
-      setRegisterState("invalid");
+    if (hasEmpty || !emailValid || !passwordStrong || !confirmMatch) {
+      setRegisterState("error");
       return;
     }
 
     setRegisterState("success");
-    setView("register");
   }
 
-  function handleLoginSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function submitLogin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (lockSeconds > 0) {
@@ -150,501 +125,344 @@ export default function Home() {
       return;
     }
 
-    const validCredentials =
+    const valid =
       loginForm.email.trim().toLowerCase() === demoAccount.email && loginForm.password === demoAccount.password;
 
-    if (validCredentials) {
+    if (valid) {
       setLoginState("success");
       setFailedAttempts(0);
       return;
     }
 
-    const nextAttempt = failedAttempts + 1;
-    setFailedAttempts(nextAttempt);
+    const next = failedAttempts + 1;
+    setFailedAttempts(next);
 
-    if (nextAttempt >= 5) {
+    if (next >= 5) {
       setLockSeconds(15 * 60);
       setLoginState("locked");
       return;
     }
 
-    if (nextAttempt === 4) {
+    if (next === 4) {
       setLoginState("warning");
       return;
     }
 
-    setLoginState("invalid");
+    setLoginState("error");
   }
 
   function resetRegister() {
-    setRegisterForm(registerDefaults);
-    setRegisterState("form");
+    setRegisterForm(emptyRegister);
+    setRegisterState("idle");
   }
 
   function resetLogin() {
-    setLoginForm(loginDefaults);
-    setLoginState("form");
+    setLoginForm(emptyLogin);
+    setLoginState("idle");
     setFailedAttempts(0);
     setLockSeconds(0);
   }
 
   return (
-    <div className="floralink-page">
-      <div className="report-shell">
-        <header className="report-header">
-          <div>
-            <p className="report-kicker">FloraLink Software Design</p>
-            <h1>Authentication Prototype</h1>
-            <p className="report-copy">
-              Registration, login, strong authentication, and rate limiting are implemented using the same
-              visual language as the FloraLink deliverable screens.
-            </p>
+    <div className="site-shell">
+      <header className="topbar">
+        <a className="brand" href="#home">
+          <span className="brand-icon">
+            <Flower2 className="h-4 w-4" />
+          </span>
+          <span>FloraLink</span>
+        </a>
+
+        <nav className="topnav">
+          <a href="#home">Home</a>
+          <a href="#auth">Account</a>
+          <Link href="/test-cases">Test Cases</Link>
+        </nav>
+
+        <button className="bag-button" type="button">
+          <ShoppingBag className="h-4 w-4" />
+          Cart
+        </button>
+      </header>
+
+      <main className="main-grid" id="home">
+        <section className="hero-copy">
+          <span className="hero-badge">Fresh flowers, simple checkout</span>
+          <h1>Flowers for every small moment.</h1>
+          <p>
+            Order bouquets, save your details, and come back faster next time.
+          </p>
+
+          <div className="hero-actions">
+            <button className="primary-cta" type="button" onClick={() => setTab("register")}>
+              Create account
+            </button>
+            <button className="secondary-cta" type="button" onClick={() => setTab("login")}>
+              Sign in
+            </button>
           </div>
 
-          <div className="report-actions">
-            <button className={view === "register" ? "chip active" : "chip"} onClick={() => setView("register")} type="button">
-              UC-01 Register
+          <div className="hero-cards" id="collections">
+            <article className="mini-card accent-pink">
+              <span>Rose Box</span>
+              <strong>SAR 149</strong>
+            </article>
+            <article className="mini-card accent-green">
+              <span>Spring Mix</span>
+              <strong>SAR 189</strong>
+            </article>
+            <article className="mini-card accent-cream">
+              <span>White Peony</span>
+              <strong>SAR 210</strong>
+            </article>
+          </div>
+        </section>
+
+        <section className="auth-panel" id="auth">
+          <div className="tabs">
+            <button
+              className={tab === "register" ? "tab active" : "tab"}
+              type="button"
+              onClick={() => setTab("register")}
+            >
+              Create account
             </button>
-            <button className={view === "login" ? "chip active" : "chip"} onClick={() => setView("login")} type="button">
-              UC-02 Login
-            </button>
-            <button className={view === "mitigations" ? "chip active" : "chip"} onClick={() => setView("mitigations")} type="button">
-              MIT-01 / MIT-02
+            <button
+              className={tab === "login" ? "tab active" : "tab"}
+              type="button"
+              onClick={() => setTab("login")}
+            >
+              Sign in
             </button>
           </div>
-        </header>
 
-        {view === "register" ? (
-          <section className="section-block">
-            <div className="section-title success-tone">A.1. UC-01: Register Account</div>
-            <p className="section-copy">
-              The main flow includes the registration form and successful account creation, while the alternative
-              flows cover duplicate email and invalid input validation.
-            </p>
-
-            <div className="mockup-grid two-up">
-              <article className="phone-frame">
-                <div className="screen-tag">UC-01 · MAIN FLOW · REGISTRATION FORM</div>
-                <MockupHeader rightLabel="Login" />
-                <div className="phone-body">
-                  {registerState === "success" ? (
-                    <div className="success-panel">
-                      <div className="success-icon">
-                        <Flower2 className="h-5 w-5" />
-                      </div>
-                      <h2>Welcome to FloraLink!</h2>
-                      <p>Your account is ready. Start shopping!</p>
-                      <div className="account-card">
-                        <h3>Your Account</h3>
-                        <div className="detail-row"><span>Name</span><strong>{demoAccount.fullName}</strong></div>
-                        <div className="detail-row"><span>Email</span><strong>{demoAccount.email}</strong></div>
-                        <div className="detail-row"><span>Member Since</span><strong>{demoAccount.memberSince}</strong></div>
-                        <div className="detail-row"><span>Status</span><strong className="verified"><CheckCircle2 className="h-4 w-4" /> Verified</strong></div>
-                      </div>
-                      <button className="primary-button" type="button">Start Shopping</button>
-                      <button className="secondary-button" type="button" onClick={resetRegister}>Complete My Profile</button>
-                    </div>
-                  ) : (
-                    <form className="phone-form" onSubmit={handleRegisterSubmit}>
-                      <h2>Create Account 🌸</h2>
-                      <p>Join FloraLink — beautiful flowers delivered</p>
-
-                      {registerState === "exists" ? (
-                        <div className="alert-box alert-danger">
-                          <AlertTriangle className="h-4 w-4" />
-                          <div>
-                            <strong>Email already registered.</strong> Sign in instead or use a different email.
-                          </div>
-                        </div>
-                      ) : null}
-
-                      {registerState === "invalid" ? (
-                        <div className="alert-box alert-danger">
-                          <CircleAlert className="h-4 w-4" />
-                          <div>
-                            <strong>Please fix the highlighted fields</strong> before submitting.
-                          </div>
-                        </div>
-                      ) : null}
-
-                      <label>
-                        <span>Full Name</span>
-                        <input
-                          value={registerForm.fullName}
-                          onChange={(event) => setRegisterForm((current) => ({ ...current, fullName: event.target.value }))}
-                          className={registerState === "invalid" && registerForm.fullName.trim() === "" ? "input-error" : ""}
-                          placeholder="Reem Alshareef"
-                        />
-                      </label>
-
-                      <label>
-                        <span>Email Address</span>
-                        <input
-                          value={registerForm.email}
-                          onChange={(event) => setRegisterForm((current) => ({ ...current, email: event.target.value }))}
-                          className={registerState === "exists" || invalidEmailFormat ? "input-error" : ""}
-                          placeholder="reem@example.com"
-                        />
-                        {registerState === "exists" ? <em>This email is already registered.</em> : null}
-                        {registerState === "invalid" && invalidEmailFormat ? <em>Invalid email format.</em> : null}
-                      </label>
-
-                      <label>
-                        <span>Phone Number</span>
-                        <input
-                          value={registerForm.phone}
-                          onChange={(event) => setRegisterForm((current) => ({ ...current, phone: event.target.value }))}
-                          placeholder="+966 50 123 4567"
-                        />
-                      </label>
-
-                      <label>
-                        <span>Password</span>
-                        <div className="password-wrap">
-                          <input
-                            type={showRegisterPassword ? "text" : "password"}
-                            value={registerForm.password}
-                            onChange={(event) => setRegisterForm((current) => ({ ...current, password: event.target.value }))}
-                            className={registerState === "invalid" && !allRulesPassed ? "input-error" : ""}
-                            placeholder="Create a password"
-                          />
-                          <button type="button" className="eye-button" onClick={() => setShowRegisterPassword((current) => !current)}>
-                            {showRegisterPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                          </button>
-                        </div>
-                      </label>
-
-                      <div className="strength-panel compact">
-                        <div className="strength-bar">
-                          <div style={{ width: passwordMeter }} />
-                        </div>
-                        <p>Strong password</p>
-                        <small>Min 8 chars · uppercase · number · special char</small>
-                      </div>
-
-                      <label>
-                        <span>Confirm Password</span>
-                        <div className="password-wrap">
-                          <input
-                            type={showConfirmPassword ? "text" : "password"}
-                            value={registerForm.confirmPassword}
-                            onChange={(event) => setRegisterForm((current) => ({ ...current, confirmPassword: event.target.value }))}
-                            className={registerState === "invalid" && !passwordsMatch ? "input-error" : ""}
-                            placeholder="••••••••"
-                          />
-                          <button type="button" className="eye-button" onClick={() => setShowConfirmPassword((current) => !current)}>
-                            {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                          </button>
-                        </div>
-                        {registerState === "invalid" && !passwordsMatch ? <em>Passwords do not match.</em> : null}
-                      </label>
-
-                      <div className="captcha-box">
-                        <label className="captcha-check">
-                          <input type="checkbox" defaultChecked />
-                          <span>I'm not a robot</span>
-                        </label>
-                        <div className="captcha-brand">reCAPTCHA</div>
-                      </div>
-
-                      <button className="primary-button" type="submit">Create My Account ✨</button>
-                      <button className="text-link" type="button" onClick={resetRegister}>Already have an account? Sign in</button>
-                    </form>
-                  )}
+          {tab === "register" ? (
+            registerState === "success" ? (
+              <div className="auth-success">
+                <div className="success-circle">
+                  <Check className="h-5 w-5" />
                 </div>
-              </article>
-
-              <article className="phone-frame">
-                <div className="screen-tag">UC-01 · ALTERNATIVE FLOWS</div>
-                <MockupHeader rightLabel="Login" />
-                <div className="phone-body stacked-preview">
-                  <div className="mini-screen">
-                    <h2>Create Account</h2>
-                    <div className="alert-box alert-danger">
-                      <AlertTriangle className="h-4 w-4" />
-                      <div><strong>Email already registered.</strong> Sign in instead or use a different email.</div>
-                    </div>
-                    <label>
-                      <span>Email Address</span>
-                      <input value="reem@example.com" readOnly className="input-error" />
-                      <em>This email is already registered.</em>
-                    </label>
-                    <label>
-                      <span>Password</span>
-                      <input value="Create a password" readOnly />
-                    </label>
-                    <button className="primary-button alt-warning" type="button">Try Another Email</button>
-                    <button className="secondary-button" type="button">Sign In to Existing Account</button>
-                  </div>
-
-                  <div className="mini-screen">
-                    <h2>Create Account</h2>
-                    <div className="alert-box alert-danger">
-                      <CircleAlert className="h-4 w-4" />
-                      <div><strong>Please fix 3 errors</strong> below before submitting.</div>
-                    </div>
-                    <label>
-                      <span>Full Name</span>
-                      <input value="" readOnly className="input-error" />
-                      <em>Full name is required.</em>
-                    </label>
-                    <label>
-                      <span>Email Address</span>
-                      <input value="not-an-email" readOnly className="input-error" />
-                      <em>Invalid email format.</em>
-                    </label>
-                    <label>
-                      <span>Password</span>
-                      <input value="•••" readOnly className="input-error" />
-                      <em>Password does not meet requirements.</em>
-                    </label>
-                    <label>
-                      <span>Confirm Password</span>
-                      <input value="•••" readOnly className="input-error" />
-                      <em>Passwords do not match.</em>
-                    </label>
-                    <button className="disabled-button" type="button">Fix errors to continue</button>
-                  </div>
+                <h2>Welcome, {registerForm.fullName || demoAccount.name}</h2>
+                <p>Your account is ready.</p>
+                <div className="summary-card">
+                  <div><span>Name</span><strong>{registerForm.fullName || demoAccount.name}</strong></div>
+                  <div><span>Email</span><strong>{registerForm.email || "new@floralink.com"}</strong></div>
+                  <div><span>Phone</span><strong>{registerForm.phone || demoAccount.phone}</strong></div>
                 </div>
-              </article>
-            </div>
-          </section>
-        ) : null}
+                <button className="primary-cta block" type="button" onClick={() => setTab("login")}>
+                  Continue to sign in
+                </button>
+                <button className="text-action" type="button" onClick={resetRegister}>
+                  Create another account
+                </button>
+              </div>
+            ) : (
+              <form className="auth-form" onSubmit={submitRegister}>
+                <h2>Create your account</h2>
 
-        {view === "login" ? (
-          <section className="section-block">
-            <div className="section-title success-tone">A.2. UC-02: Login</div>
-            <p className="section-copy">
-              The login flow supports successful authentication, invalid credentials feedback, and temporary account
-              lockout after repeated failures.
-            </p>
+                {registerState === "exists" ? (
+                  <div className="notice error">This email is already registered.</div>
+                ) : null}
+                {registerState === "error" ? (
+                  <div className="notice error">Please check the highlighted fields.</div>
+                ) : null}
 
-            <div className="mockup-grid three-up">
-              <article className="phone-frame">
-                <div className="screen-tag">UC-02 · MAIN FLOW · LOGIN FORM</div>
-                <MockupHeader rightLabel="Register" />
-                <div className="phone-body">
-                  {loginState === "success" ? (
-                    <div className="success-panel compact-success">
-                      <div className="success-icon secure">
-                        <ShieldCheck className="h-5 w-5" />
-                      </div>
-                      <h2>Welcome Back 🌷</h2>
-                      <p>You are signed in to your FloraLink account.</p>
-                      <div className="account-card">
-                        <div className="detail-row"><span>Email</span><strong>{demoAccount.email}</strong></div>
-                        <div className="detail-row"><span>Status</span><strong className="verified"><CheckCircle2 className="h-4 w-4" /> Active</strong></div>
-                      </div>
-                      <button className="primary-button" type="button" onClick={resetLogin}>Continue</button>
-                    </div>
-                  ) : loginState === "locked" ? (
-                    <div className="locked-panel">
-                      <div className="lock-badge"><Lock className="h-5 w-5" /></div>
-                      <h2>Account Locked</h2>
-                      <p>5 consecutive failed login attempts detected. Access is temporarily suspended for security.</p>
-                      <div className="countdown-box">{formatCountdown(lockSeconds)}</div>
-                      <small>Minutes remaining until unlock</small>
-                      <div className="info-note">
-                        <CircleAlert className="h-4 w-4" />
-                        Reset your password to regain immediate access.
-                      </div>
-                      <button className="secondary-button" type="button" onClick={resetLogin}>Reset Password via Email</button>
-                    </div>
-                  ) : (
-                    <form className="phone-form" onSubmit={handleLoginSubmit}>
-                      <h2>Welcome Back 🌷</h2>
-                      <p>Sign in to your FloraLink account</p>
+                <label>
+                  <span>Full name</span>
+                  <input
+                    value={registerForm.fullName}
+                    onChange={(event) => setRegisterForm((current) => ({ ...current, fullName: event.target.value }))}
+                    className={registerState === "error" && registerForm.fullName.trim() === "" ? "field-error" : ""}
+                    placeholder="Reem Alshareef"
+                  />
+                </label>
 
-                      {loginState === "invalid" ? (
-                        <div className="alert-box alert-warning">
-                          <AlertTriangle className="h-4 w-4" />
-                          <div><strong>Invalid email or password.</strong> {5 - failedAttempts} attempt(s) remaining before account lockout.</div>
-                        </div>
-                      ) : null}
+                <label>
+                  <span>Email</span>
+                  <input
+                    value={registerForm.email}
+                    onChange={(event) => setRegisterForm((current) => ({ ...current, email: event.target.value }))}
+                    className={registerState === "exists" || (registerState === "error" && !emailValid) ? "field-error" : ""}
+                    placeholder="reem@example.com"
+                  />
+                </label>
 
-                      {loginState === "warning" ? (
-                        <div className="alert-box alert-warning">
-                          <AlertTriangle className="h-4 w-4" />
-                          <div><strong>Warning:</strong> 4 failed attempts. 1 remaining before 15-minute lockout.</div>
-                        </div>
-                      ) : null}
+                <label>
+                  <span>Phone</span>
+                  <input
+                    value={registerForm.phone}
+                    onChange={(event) => setRegisterForm((current) => ({ ...current, phone: event.target.value }))}
+                    placeholder="+966 50 123 4567"
+                  />
+                </label>
 
-                      <label>
-                        <span>Email Address</span>
-                        <input value={loginForm.email} onChange={(event) => setLoginForm((current) => ({ ...current, email: event.target.value }))} className={loginState === "invalid" || loginState === "warning" ? "input-error" : ""} />
-                      </label>
-
-                      <label>
-                        <span>Password</span>
-                        <div className="password-wrap">
-                          <input
-                            type={showLoginPassword ? "text" : "password"}
-                            value={loginForm.password}
-                            onChange={(event) => setLoginForm((current) => ({ ...current, password: event.target.value }))}
-                            className={loginState === "invalid" || loginState === "warning" ? "input-error" : ""}
-                            placeholder="••••••••"
-                          />
-                          <button type="button" className="eye-button" onClick={() => setShowLoginPassword((current) => !current)}>
-                            {showLoginPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                          </button>
-                        </div>
-                      </label>
-
-                      {failedAttempts >= 4 ? (
-                        <div className="failed-attempts">
-                          <span>Failed attempts</span>
-                          <div className="attempt-dots">
-                            {Array.from({ length: 5 }).map((_, index) => (
-                              <div key={index} className={index < failedAttempts ? "dot active" : "dot"}>{index < failedAttempts ? "×" : index + 1}</div>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-
-                      {failedAttempts >= 4 ? (
-                        <div className="captcha-box">
-                          <label className="captcha-check">
-                            <input type="checkbox" defaultChecked />
-                            <span>Verify you're human</span>
-                          </label>
-                          <div className="captcha-brand">reCAPTCHA</div>
-                        </div>
-                      ) : null}
-
-                      <button className={loginState === "invalid" || loginState === "warning" ? "primary-button warm" : "primary-button"} type="submit">Sign In</button>
-                      <button className="text-link right" type="button">Forgot password?</button>
-                      <button className="text-link" type="button" onClick={resetLogin}>New to FloraLink? Create an account</button>
-                    </form>
-                  )}
-                </div>
-              </article>
-
-              <article className="phone-frame">
-                <div className="screen-tag">UC-02 · ALT A1 · INVALID CREDENTIALS</div>
-                <MockupHeader rightLabel="Login" />
-                <div className="phone-body">
-                  <div className="mini-screen full-height">
-                    <h2>Welcome Back</h2>
-                    <div className="alert-box alert-warning">
-                      <AlertTriangle className="h-4 w-4" />
-                      <div><strong>Invalid email or password.</strong> 3 attempts remaining before account lockout.</div>
-                    </div>
-                    <label>
-                      <span>Email Address</span>
-                      <input value="reem@example.com" readOnly className="input-error" />
-                    </label>
-                    <label>
-                      <span>Password</span>
-                      <input value="••••••••" readOnly className="input-error" />
-                    </label>
-                    <button className="primary-button warm" type="button">Try Again</button>
-                    <button className="text-link right" type="button">Forgot your password?</button>
-                  </div>
-                </div>
-              </article>
-
-              <article className="phone-frame">
-                <div className="screen-tag">UC-02 · ALT A2 · ACCOUNT LOCKED</div>
-                <MockupHeader rightLabel="Login" />
-                <div className="phone-body">
-                  <div className="locked-panel">
-                    <div className="lock-badge"><Lock className="h-5 w-5" /></div>
-                    <h2>Account Locked</h2>
-                    <p>5 consecutive failed login attempts detected. Access is temporarily suspended for security.</p>
-                    <div className="countdown-box">14:32</div>
-                    <small>Minutes remaining until unlock</small>
-                    <div className="info-note">
-                      <CircleAlert className="h-4 w-4" />
-                      Reset your password to regain immediate access.
-                    </div>
-                    <button className="secondary-button" type="button">Reset Password via Email</button>
-                  </div>
-                </div>
-              </article>
-            </div>
-          </section>
-        ) : null}
-
-        {view === "mitigations" ? (
-          <section className="section-block">
-            <div className="section-title success-tone">Mitigation Use Cases</div>
-            <p className="section-copy">
-              The mitigation screens focus on password policy enforcement and pre-lockout warning behavior.
-            </p>
-
-            <div className="mockup-grid two-up">
-              <article className="phone-frame">
-                <div className="screen-tag">MIT-01 · PASSWORD POLICY · REAL-TIME CHECK</div>
-                <MockupHeader rightLabel="Login" />
-                <div className="phone-body">
-                  <div className="mini-screen full-height">
-                    <h2>Secure Your Account 🛡️</h2>
-                    <p>Password must meet ALL 5 requirements</p>
-                    <label>
-                      <span>Choose Password</span>
-                      <div className="password-wrap">
-                        <input value={registerForm.password || "••••"} readOnly />
-                        <button type="button" className="eye-button"><Eye className="h-4 w-4" /></button>
-                      </div>
-                    </label>
-                    <div className="policy-panel">
-                      <h3>Password Requirements</h3>
-                      {passwordRules.map((rule) => (
-                        <div key={rule.label} className={rule.passed ? "policy-item passed" : "policy-item failed"}>
-                          {rule.passed ? "✓" : "✕"} {rule.label}
-                        </div>
-                      ))}
-                    </div>
-                    <button className={allRulesPassed ? "primary-button" : "disabled-button"} type="button">
-                      {allRulesPassed ? "Continue" : "Continue (requirements not met)"}
+                <label>
+                  <span>Password</span>
+                  <div className="password-field">
+                    <input
+                      type={showRegisterPassword ? "text" : "password"}
+                      value={registerForm.password}
+                      onChange={(event) => setRegisterForm((current) => ({ ...current, password: event.target.value }))}
+                      className={registerState === "error" && !passwordStrong ? "field-error" : ""}
+                      placeholder="Create password"
+                    />
+                    <button type="button" className="icon-button" onClick={() => setShowRegisterPassword((value) => !value)}>
+                      {showRegisterPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                </div>
-              </article>
+                </label>
 
-              <article className="phone-frame">
-                <div className="screen-tag">MIT-02 · PRE-LOCKOUT WARNING · 4TH ATTEMPT</div>
-                <MockupHeader rightLabel="Login" />
-                <div className="phone-body">
-                  <div className="mini-screen full-height">
-                    <h2>Welcome Back</h2>
-                    <div className="alert-box alert-warning">
-                      <AlertTriangle className="h-4 w-4" />
-                      <div><strong>Warning:</strong> 4 failed attempts. 1 remaining before 15-minute lockout.</div>
+                <div className="password-meter">
+                  <div className="password-meter-fill" style={{ width: passwordProgress }} />
+                </div>
+                <div className="rules-grid">
+                  {passwordRules.map((rule) => (
+                    <div key={rule.label} className={rule.passed ? "rule ok" : "rule"}>
+                      <span>{rule.passed ? "✓" : "•"}</span>
+                      {rule.label}
                     </div>
-                    <div className="failed-attempts spacious">
-                      <span>Failed attempts</span>
-                      <div className="attempt-dots">
-                        <div className="dot active">×</div>
-                        <div className="dot active">×</div>
-                        <div className="dot active">×</div>
-                        <div className="dot active">×</div>
-                        <div className="dot">5</div>
-                      </div>
-                    </div>
-                    <label>
-                      <span>Email</span>
-                      <input value="reem@example.com" readOnly />
-                    </label>
-                    <label>
-                      <span>Password</span>
-                      <input value="Enter carefully" readOnly />
-                    </label>
-                    <div className="captcha-box">
-                      <label className="captcha-check">
-                        <input type="checkbox" />
-                        <span>Verify you're human</span>
-                      </label>
-                      <div className="captcha-brand">reCAPTCHA</div>
-                    </div>
-                    <button className="primary-button" type="button">Sign In</button>
+                  ))}
+                </div>
+
+                <label>
+                  <span>Confirm password</span>
+                  <div className="password-field">
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={registerForm.confirmPassword}
+                      onChange={(event) => setRegisterForm((current) => ({ ...current, confirmPassword: event.target.value }))}
+                      className={registerState === "error" && !confirmMatch ? "field-error" : ""}
+                      placeholder="Repeat password"
+                    />
+                    <button type="button" className="icon-button" onClick={() => setShowConfirmPassword((value) => !value)}>
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </label>
+
+                <div className="captcha-row">
+                  <label className="check-row">
+                    <input type="checkbox" defaultChecked />
+                    <span>I'm not a robot</span>
+                  </label>
+                  <span className="captcha-mark">reCAPTCHA</span>
+                </div>
+
+                <button className="primary-cta block" type="submit">
+                  Create account
+                </button>
+                <button className="text-action" type="button" onClick={() => setTab("login")}>
+                  Already have an account?
+                </button>
+              </form>
+            )
+          ) : loginState === "success" ? (
+            <div className="auth-success">
+              <div className="success-circle secure">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <h2>Welcome back</h2>
+              <p>You're signed in.</p>
+              <div className="summary-card compact">
+                <div><span>Email</span><strong>{demoAccount.email}</strong></div>
+                <div><span>Status</span><strong>Active</strong></div>
+              </div>
+              <button className="primary-cta block" type="button" onClick={resetLogin}>
+                Continue shopping
+              </button>
+            </div>
+          ) : loginState === "locked" ? (
+            <div className="locked-box">
+              <div className="lock-icon">
+                <Lock className="h-5 w-5" />
+              </div>
+              <h2>Account temporarily locked</h2>
+              <div className="timer-box">{formatTime(lockSeconds)}</div>
+              <p>Too many failed attempts. Try again later.</p>
+              <button className="secondary-cta block" type="button" onClick={resetLogin}>
+                Reset form
+              </button>
+            </div>
+          ) : (
+            <form className="auth-form" onSubmit={submitLogin}>
+              <h2>Sign in</h2>
+
+              {loginState === "error" ? <div className="notice error">Invalid email or password.</div> : null}
+              {loginState === "warning" ? (
+                <div className="notice warning">One attempt remaining before temporary lock.</div>
+              ) : null}
+
+              <label>
+                <span>Email</span>
+                <input
+                  value={loginForm.email}
+                  onChange={(event) => setLoginForm((current) => ({ ...current, email: event.target.value }))}
+                  className={loginState === "error" || loginState === "warning" ? "field-error" : ""}
+                />
+              </label>
+
+              <label>
+                <span>Password</span>
+                <div className="password-field">
+                  <input
+                    type={showLoginPassword ? "text" : "password"}
+                    value={loginForm.password}
+                    onChange={(event) => setLoginForm((current) => ({ ...current, password: event.target.value }))}
+                    className={loginState === "error" || loginState === "warning" ? "field-error" : ""}
+                    placeholder="Enter password"
+                  />
+                  <button type="button" className="icon-button" onClick={() => setShowLoginPassword((value) => !value)}>
+                    {showLoginPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </label>
+
+              {failedAttempts > 0 ? (
+                <div className="attempts-row">
+                  <span>{failedAttempts}/5</span>
+                  <div className="attempts-dots">
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <i key={index} className={index < failedAttempts ? "filled" : ""} />
+                    ))}
                   </div>
                 </div>
-              </article>
-            </div>
-          </section>
-        ) : null}
-      </div>
+              ) : null}
+
+              {failedAttempts >= 4 ? (
+                <div className="captcha-row">
+                  <label className="check-row">
+                    <input type="checkbox" defaultChecked />
+                    <span>Verify you're human</span>
+                  </label>
+                  <span className="captcha-mark">reCAPTCHA</span>
+                </div>
+              ) : null}
+
+              <button className="primary-cta block" type="submit">
+                Sign in
+              </button>
+              <button className="text-action" type="button" onClick={() => setTab("register")}>
+                Need a new account?
+              </button>
+            </form>
+          )}
+        </section>
+      </main>
+
+      <section className="feature-strip">
+        <div>
+          <Sparkles className="h-4 w-4" />
+          Same-day bouquets
+        </div>
+        <div>
+          <ShieldCheck className="h-4 w-4" />
+          Secure account access
+        </div>
+        <div>
+          <ShoppingBag className="h-4 w-4" />
+          Fast repeat orders
+        </div>
+      </section>
     </div>
   );
 }
