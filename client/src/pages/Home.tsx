@@ -165,7 +165,7 @@ export default function Home() {
     <div className="site-shell">
       <header className="topbar">
         <a className="brand" href="#home" aria-label="FloraLink home">
-          <img src="/logo.png" alt="FloraLink" className="brand-logo" />
+          <img src="/manus-storage/floralink-logo_02b3becb.png" alt="FloraLink" className="brand-logo" />
         </a>
 
         <nav className="topnav">
