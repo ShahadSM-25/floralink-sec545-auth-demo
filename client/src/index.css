@@ -161,20 +161,15 @@
   .brand {
     display: inline-flex;
     align-items: center;
-    gap: 0.7rem;
-    font-weight: 700;
-    font-size: 1.02rem;
     color: #2f4a3b;
+    text-decoration: none;
   }
 
-  .brand-icon {
-    width: 2rem;
-    height: 2rem;
-    border-radius: 999px;
-    display: grid;
-    place-items: center;
-    color: white;
-    background: #1f7a53;
+  .brand-logo {
+    height: 3.15rem;
+    width: auto;
+    display: block;
+    object-fit: contain;
   }
 
   .topnav {

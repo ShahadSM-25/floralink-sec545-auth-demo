@@ -3,13 +3,11 @@ import {
   Check,
   Eye,
   EyeOff,
-  Flower2,
   Lock,
   ShieldCheck,
   ShoppingBag,
   Sparkles,
 } from "lucide-react";
-import { Link } from "wouter";
 
 type RegisterForm = {
   fullName: string;
@@ -166,17 +164,13 @@ export default function Home() {
   return (
     <div className="site-shell">
       <header className="topbar">
-        <a className="brand" href="#home">
-          <span className="brand-icon">
-            <Flower2 className="h-4 w-4" />
-          </span>
-          <span>FloraLink</span>
+        <a className="brand" href="#home" aria-label="FloraLink home">
+          <img src="/logo.png" alt="FloraLink" className="brand-logo" />
         </a>
 
         <nav className="topnav">
           <a href="#home">Home</a>
           <a href="#auth">Account</a>
-          <Link href="/test-cases">Test Cases</Link>
         </nav>
 
         <button className="bag-button" type="button">
@@ -202,20 +196,6 @@ export default function Home() {
             </button>
           </div>
 
-          <div className="hero-cards" id="collections">
-            <article className="mini-card accent-pink">
-              <span>Rose Box</span>
-              <strong>SAR 149</strong>
-            </article>
-            <article className="mini-card accent-green">
-              <span>Spring Mix</span>
-              <strong>SAR 189</strong>
-            </article>
-            <article className="mini-card accent-cream">
-              <span>White Peony</span>
-              <strong>SAR 210</strong>
-            </article>
-          </div>
         </section>
 
         <section className="auth-panel" id="auth">
