@@ -31,4 +31,7 @@
 - [ ] Fix the failing registration and related authentication flows.
 - [ ] Verify registration, login, and forgot-password again after the fix.
 - [ ] Help the user open or publish the latest working FloraLink version instead of an outdated link.
-- [ ] Push the latest confirmed FloraLink project changes to the GitHub repository on main.
+- [x] Push the latest confirmed FloraLink project changes to the GitHub repository on main.
+- [x] Remove temporary diagnostic and helper files from the GitHub repository and push a clean follow-up commit.
+- [ ] Verify whether the current Manus project state exactly matches the cleaned GitHub repository state.
+- [ ] Push all remaining Manus-local changes back to GitHub so both states match again.
