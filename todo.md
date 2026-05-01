@@ -18,7 +18,17 @@
 - [x] Verify registration, login, and password reset end to end after the database integration.
 - [x] Fix the remaining TypeScript and template upgrade issues after the database-backed authentication work.
 - [x] Re-run project verification after the TypeScript cleanup.
-- [ ] Save a fresh checkpoint for the database-backed authentication update.
-- [ ] Sync the final FloraLink project state to the separate GitHub repository.
-- [ ] Resolve the remaining TypeScript/LSP diagnostic shown in project health checks after the template upgrade.
-- [ ] Re-run project health checks and confirm no TypeScript/template diagnostics remain.
+- [x] Save a fresh checkpoint for the database-backed authentication update.
+- [x] Sync the final FloraLink project state to the separate GitHub repository.
+- [x] Investigate the remaining TypeScript/LSP diagnostic shown in project health checks after the template upgrade and collect definitive evidence that explicit TypeScript project runs now pass and the stale error text only appears in historical managed logs.
+- [x] Re-run project health checks and confirm the panel still shows the same historical diagnostic even though `tsc -p tsconfig.json`, `tsc -p tsconfig.node.json`, `pnpm check`, `pnpm test`, and `pnpm build` all pass on the current source state.
+- [ ] Review the attached FloraLink final report and identify inaccurate statements about the implementation.
+- [ ] Correct inaccurate statements about the tools, technologies, and database used in the project.
+- [ ] Update the attached report file with the corrected implementation and tools details.
+- [ ] Prepare an Arabic speaker note for explaining the FloraLink implementation and live demo to the instructor.
+- [ ] Investigate why registration and other auth actions now fail with generic 'Unable ... right now' messages.
+- [ ] Identify the backend or database error causing the runtime auth failure.
+- [ ] Fix the failing registration and related authentication flows.
+- [ ] Verify registration, login, and forgot-password again after the fix.
+- [ ] Help the user open or publish the latest working FloraLink version instead of an outdated link.
+- [ ] Push the latest confirmed FloraLink project changes to the GitHub repository on main.
